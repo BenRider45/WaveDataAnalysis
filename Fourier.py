@@ -2,7 +2,18 @@ from scipy.fft import fft, fftfreq
 import numpy as np
 import matplotlib.pyplot as plt
 
-#TODO: Write Helper function to parse possible number strings (Scientific Notation) 
+
+#Handles exceptions in raw data such as numbers represented in scientific notation
+def LineParser(data):
+    dataNum =0.0
+    if "*" in data:
+        asteriskPos = data.index("*")
+        power = (float)(data[asteriskPos+2:])
+        dataNum = (float)(data[:asteriskPos])*(10**power)
+    else:
+        dataNum = float(data)
+    return dataNum
+
 
 def ParseData(fileName,numOfGauges):
     dataFile = open(fileName,'r')
@@ -12,7 +23,7 @@ def ParseData(fileName,numOfGauges):
    #     print(item)
         item = item.replace('\n','')
 
-        item = float(item)
+        item = LineParser(item)
         dataArrFloatified += [item]
        # print(item)
     #print(dataArr)
@@ -55,7 +66,9 @@ def GenerateFFT(parsedData,T):
         print(f"Signal Size at i={i}: {N}")
         
         x=np.arange(0,N,1/T)
-        x2 = np.arange(32,49.03,.00447334)
+        t1= parsedData[0][0]
+        t2= parsedData[0][len(parsedData[0])-1]
+        x2 = np.arange(t1,t2,(t2-t1)/N)
         fourier =  2*np.fft.fftshift(np.fft.fft(signal,norm="forward"))
         fourierFreq =np.fft.fftshift(np.fft.fftfreq(n=signal.size,d=1.0/T))
         
@@ -156,7 +169,7 @@ def main():
     #Creating second plot to record main and side band amplitudes
 
     AmpFig,ax = plt.subplots(3,sharey=True,sharex=True)
-    plt.setp(ax, xlim=(0,800),ylim=(0,.15))
+    plt.setp(ax, xlim=(0,800),ylim=(0,.25))
     x=np.arange(100,731,90)
     plt.xticks(x)
     plotOrder = [1,0,2]
