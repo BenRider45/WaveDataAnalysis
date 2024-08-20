@@ -1,7 +1,7 @@
 from scipy.fft import fft, fftfreq
 import numpy as np
 import matplotlib.pyplot as plt
-
+import datetime
 
 #Handles exceptions in raw data such as numbers represented in scientific notation
 def LineParser(data):
@@ -49,13 +49,13 @@ def ParseData(fileName,numOfGauges):
 
 
 #Takes discrete FFT of given data, plots all data streams onto a single figure on seperate graphs
-def GenerateFFT(parsedData,T):
+def GenerateFFT(parsedData,T,fileName):
     colors = ["red","green","blue","purple","orange","cyan","pink","black"]
     parsedDataY=parsedData[1:]
 
 
     fig, ax = plt.subplots(len(parsedDataY))
-    fig2, ax2 = plt.subplots(len(parsedDataY),sharex=True)
+    fig2, ax2 = plt.subplots(len(parsedDataY),sharex=True,sharey=True)
     FourierValues = [[] for _ in range(len(parsedDataY))]
     for i in range(len(parsedDataY)):
 
@@ -70,6 +70,7 @@ def GenerateFFT(parsedData,T):
         t2= parsedData[0][len(parsedData[0])-1]
         x2 = np.arange(t1,t2,(t2-t1)/N)
         fourier =  2*np.fft.fftshift(np.fft.fft(signal,norm="forward"))
+        phase , phaseFreqs, phaseLine = ax2[i].phase_spectrum(signal,Fs=200,mouseover=True)
         fourierFreq =np.fft.fftshift(np.fft.fftfreq(n=signal.size,d=1.0/T))
         
         #calculating coefficient needed to scale FFT amplitude back to normal
@@ -80,25 +81,31 @@ def GenerateFFT(parsedData,T):
         
         #print(np.sqrt(np.sqrt(fourier.real**2+fourier.imag**2)).tolist())
         ax[i].plot(fourierFreq,np.sqrt(fourier.real**2+fourier.imag**2),color=colors[i],linewidth=.75)
-        ax2[i].plot(x2,np.arctan(-fourier.imag/fourier.real),color=colors[i],linewidth=.75)
+        ax2[i].plot(phaseFreqs,phase,linewidth=.75,color=colors[i])
+
+        #ax2[i].plot(x2,np.arctan(-fourier.imag/fourier.real),color=colors[i],linewidth=.75)
         
         #ax[i].set_yscale("log")
         #ax[i].set_xbound(lower=-10,upper=10)
     plt.setp(ax, xlim=(0,10),ylim=ax[0].get_ylim())
-    plt.setp(ax2,ylim=(-np.pi/2,np.pi/2))
+    plt.setp(ax2,ylim=(-2*np.pi,2*np.pi))
      
     
     plt.yscale = "log"
     fig.suptitle("Fourier Transform of Monochromatic Wavetrain with Amplitude Modulation",fontweight="bold")
     fig.supxlabel("Frequency (Hz)",fontweight="bold")
     fig.supylabel("Amplitude (cm)",fontweight="bold")
-    fig2.suptitle("Phase of Fourier Transforms Over Time",fontweight="bold")
-    fig2.supxlabel("Time (Sec)",fontweight="bold")
+    fig2.suptitle("Phase of Fourier Transforms",fontweight="bold")
+    fig2.supxlabel("Frequency",fontweight="bold")
     fig2.supylabel("Phase",fontweight="bold")
     FourierValues.append([fourierFreq])
+    dateString = str(datetime.datetime.now(tz=datetime.timezone.utc).date())
+    fileNameTrunkd= fileName[:fileName.index(".")]
+    print(fileNameTrunkd)
+    FFTFileName="FFT8Gauge"+dateString+fileNameTrunkd+".png"
+    fig.savefig("FFT8Gauge"+dateString+fileNameTrunkd+".png")
+    fig2.savefig("FreqPhasePerGauge"+dateString+fileNameTrunkd+"png")
 
-
-    
     return ax,fig
 
 
@@ -130,8 +137,9 @@ def FindZeroIndex(pointList):
 
 def main():
     numGauges=8
-    parsedData = ParseData("out-subn-23jul24-p38-1.txt",8)
-    FourierAx,FourierFig = GenerateFFT(parsedData,200)
+    fileName= "out-subn-23jul24-p38-1.txt"
+    parsedData = ParseData(fileName,8)
+    FourierAx,FourierFig = GenerateFFT(parsedData,200,fileName)
     print(len(FourierAx))
     FourierAxPointData=[[] for _ in range(numGauges)]
     
@@ -141,7 +149,6 @@ def main():
 
 
             
-    #TODO plot band amplitudes on 3 seperate graphs (left center and right)
     FourierAxPointDataProcessed=[[] for _ in range(numGauges)]
     i=0
     for line in FourierAxPointData:
