@@ -194,7 +194,7 @@ def ProcessFourierGaugeData(FourierAx,phaseAx,numGauges,carrierFreq,leftPertFreq
 
 def main():
     numGauges=8
-    fileName= "out-subn-23jul24-p38-1.txt"
+    fileName= "out-M-16jul24-p37-2-8Gauges.txt"
     parsedData = ParseData(fileName,8)
     pertCoefficient = 10
     carrierFreq = 3.3003
