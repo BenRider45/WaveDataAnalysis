@@ -1,5 +1,6 @@
 #General library I have developed in order to make future data collection more streamlined.
-
+from scipy.optimize import curve_fit
+import numpy as np
 class DataProcessing:
 
 
@@ -65,3 +66,14 @@ class DataProcessing:
                 minLen = len(item)
         return minLen
         
+    def GetExpCurveFit(self, xVals,yVals):
+        fitCoefs = curve_fit(lambda xVals,a,b: a*np.exp(b*xVals), xVals,yVals, maxfev=10000 )
+        return fitCoefs
+
+    def GetExpCurveFitWithC(self, xVals,yVals):
+        fitCoefs = curve_fit(lambda xVals,a,b,c: a*np.exp(b*xVals)+c, xVals,yVals, maxfev=10000 )
+        return fitCoefs
+        
+
+    def ExpDataFitFunction(self, a,b,x):
+        return a*np.e**(b*x) 
