@@ -21,18 +21,17 @@ import datetime
 ExpFitFunctionWithC = lambda a,b,c,x: a*np.exp(x*b) +c 
 
 
-def ExpFitFunctionNoAC(b,x):
-    return np.exp(x*b)
-
 def ExpFitFunction(a,b,x):
     return a*np.exp(x*b)
 
-def ExpFitFunctionWc(a,b,c,x):
-    return a*np.exp(x*b)+c
+
+def LogistFitFunc(a,b,c,t):
+    return ((a)/(c*(np.exp(a*t))-b))+ (a/b)
 
 def GetExpCurveFit(xVals,yVals):
     fitCoefs = curve_fit(lambda xVals,a,b: a*np.exp(b*xVals), xVals,yVals, maxfev=10000 )
     return fitCoefs
+
 
 def WindDataTimeStartupGraph(CalCoef, sampleRate, DP, numXPos, parsedWindData,WindSpeedString):
     xCoords =[1274.5,1200.5,1127.3,1055.5,982.0,910.5,837.6,700]
@@ -54,12 +53,9 @@ def WindDataTimeStartupGraph(CalCoef, sampleRate, DP, numXPos, parsedWindData,Wi
         
         #making curve fit
         fitCoefs, pcov ,infodict,mesg,ier= curve_fit(lambda xCropped,a,b: a*np.exp(xCropped*b) ,xCropped,yCropped,maxfev = 100000, full_output=True)
-        fitCoefsWc, pcovWc ,infodictWc,mesgWc,ierWc= curve_fit(lambda xCropped,a,b,c: a*np.exp(xCropped*b) +c ,xCropped,yCropped,maxfev = 100000, full_output=True)
-        fitCoefsNoBC, pcovWc ,infodictWc,mesgWc,ierWc= curve_fit(lambda xCropped,b: np.exp(xCropped*b) ,xCropped,yCropped,maxfev = 100000, full_output=True)
 
 
         expCurveFitConstants[i] = [fitCoefs]
-        expCurveFitConstantsWc[i] = [fitCoefsWc]
 
 
 
@@ -73,7 +69,6 @@ def WindDataTimeStartupGraph(CalCoef, sampleRate, DP, numXPos, parsedWindData,Wi
         ax[i].set_ylabel(f"x=({xCoords[i]})")
         ax[i].set_xlabel(r'${}*e^{{{}*x}}$'.format((float)(fitCoefs[0]),round(fitCoefs[1],4)))
         ax[i].plot(xCropped,ExpFitFunction(*fitCoefs,xCropped),ls=":")
-        ax[i].plot(xCropped,ExpFitFunctionWc(*fitCoefsWc,xCropped),ls=":",color='purple')
 
 
         
@@ -84,23 +79,65 @@ def WindDataTimeStartupGraph(CalCoef, sampleRate, DP, numXPos, parsedWindData,Wi
         
         #ax[numXPos].plot(expCurveFitConstants[i][0][0],(len(x)/numXPos)*i,marker="o",markersize=5,markeredgecolor="red",color="black")
     plt.subplots_adjust(hspace=.7)
-    return fig, ax, expCurveFitConstants, expCurveFitConstantsWc
+    return fig, ax, expCurveFitConstants
 
 #TODO: set up logisitcal/nonlinear fit (ODE in research notebook) 
 #Graph fit with known constants A, B (A found exp const b) (B= avg wind speed)
 
+def CreateLogisticalFitGraph(sampleRate, expFitCoefs,DP, parsedWindData,WindSpeedString):
+    xCoords =[1274.5,1200.5,1127.3,1055.5,982.0,910.5,837.6,700]
+
+    logistFitFig,ax = plt.subplots(8,sharex=True)
+    minDataLen = DP.FindMin(parsedWindData)
+
+    #for h in range(2):
+    for i in range(8):
+        x= np.arange(0,minDataLen/sampleRate,1/sampleRate)
+
+        xCropped = x[11*sampleRate:40*sampleRate]
+        yCropped = parsedWindData[i ][11*sampleRate:40*sampleRate]
+
+        SteadyStateY = parsedWindData[i][30*sampleRate:40*sampleRate]
+
+        SteadyStateMean = np.mean(SteadyStateY)
+
+        xCropped = np.array(xCropped , dtype=float)
+        yCropped = np.array(yCropped, dtype= float)
+
+        findCTValue = 11
+        
+        findCYValue = yCropped[(findCTValue-11)*sampleRate]
+        a = expFitCoefs[i][0][1]
+        b = a/SteadyStateMean
+
+        
+        cValue = DP.FindLogistC(a,b,findCYValue,findCTValue)
+
+        ax[i].plot(xCropped, yCropped, linewidth=1.5)
+        ax[i].plot(xCropped, LogistFitFunc(a,b,cValue,xCropped),ls=":",color="purple")
+        ax[i].set_ylabel(f"x=({xCoords[i]})")
+        ax[i].set_ylabel(f"x=({xCoords[i]})")
+
+
+
+    logistFitFig.suptitle(f"Logisitical fit for Fan Speed {WindSpeedString}")
+
+    return logistFitFig, ax
 
 
 
 
-def CreateExpFitCoefGraph(expFitCoef,expFitCoefsWc,xCoords,WindSpeed):
+
+
+
+
+def CreateExpFitCoefGraph(expFitCoef,xCoords,WindSpeed):
     expConstFig, ax = plt.subplots()
     ax.set_xticks([1274.5,1200.5,1127.3,1055.5,982.0,910.5,837.6,700])
     ax.invert_xaxis()
     ax.set_ybound(0,1)
     for i in range(len(expFitCoef)):
         ax.plot(xCoords[i],expFitCoef[i][0][1],marker="o",markersize=5,markeredgecolor="red",color="black")
-        ax.plot(xCoords[i],expFitCoefsWc[i][0][1],marker="o",markersize=5,markeredgecolor="purple",color="black")
  
     expConstFig.suptitle(f"Exponential fit b constant Vs. X (Distance down tank) at Windspeed {WindSpeed}")
     return expConstFig, ax
@@ -160,10 +197,12 @@ def main():
     for i in range(4):
         
         
-        windVTimeFig,windVTimeAx, expFitCoef, expFitCoefWc=WindDataTimeStartupGraph(CalCoef,sampleRate,DP,numXPos,ParsedWindDataByWindSpeed[i],WindSpeeds[i])
-        expConstFig, expConstAx = CreateExpFitCoefGraph(expFitCoef,expFitCoefWc,xCoords,WindSpeeds[i])
+        windVTimeFig,windVTimeAx, expFitCoef = WindDataTimeStartupGraph(CalCoef,sampleRate,DP,numXPos,ParsedWindDataByWindSpeed[i],WindSpeeds[i])
+        expConstFig, expConstAx = CreateExpFitCoefGraph(expFitCoef,xCoords,WindSpeeds[i])
         expConstFig.suptitle(f"Exp-fit-b-constant Vs. X Distance at Windspeed {WindSpeeds[i]}")
         WindvTime_ExpConstAx_Arr[i] = [windVTimeAx,expConstAx]
+        logistFitFig, logistFitAx =  CreateLogisticalFitGraph(sampleRate,expFitCoef, DP,ParsedWindDataByWindSpeed[i],WindSpeeds[i])
+
 
 
     # BigWindVTimeFig, BigWindVTimeAx = plt.subplots(4,2)

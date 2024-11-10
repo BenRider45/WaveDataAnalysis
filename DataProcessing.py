@@ -77,3 +77,7 @@ class DataProcessing:
 
     def ExpDataFitFunction(self, a,b,x):
         return a*np.e**(b*x) 
+    
+    def FindLogistC(self,a,b,y,t):
+        return (a)/((np.exp(a*t))*(y-(a/b)))+(b/np.exp(a*t))
+    
