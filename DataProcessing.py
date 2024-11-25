@@ -81,3 +81,31 @@ class DataProcessing:
     def FindLogistC(self,a,b,y,t):
         return (a)/((np.exp(a*t))*(y-(a/b)))+(b/np.exp(a*t))
     
+
+    def ExperFunc(self,t,c,vavg):
+        return (-c*np.exp(t-10))/(1-(c*np.exp(t-10)))
+    
+    def ExperFuncCalcC(self,y,vavg):
+        return (-y)/(1-y)
+
+    def CalcError(self,yData,sampleRate):
+        steadyStateMean = np.mean(yData[30*sampleRate:40*sampleRate])
+        experFuncC = self.ExperFuncCalcC(yData[10*sampleRate],steadyStateMean)
+        xRange = np.linspace(0,40,sampleRate*40)
+        experYData = []
+        num = 0
+        dem = 0
+        for i in range(len(xRange)):
+            experYData.append(self.ExperFunc(xRange[i],experFuncC,steadyStateMean))
+            num += ((self.ExperFunc(xRange[i],experFuncC,steadyStateMean)/steadyStateMean)-yData[i])**2
+            
+            dem += (yData[i]/steadyStateMean)**2
+
+        
+        return num/dem, experFuncC, steadyStateMean, xRange, experYData
+
+
+
+
+
+         

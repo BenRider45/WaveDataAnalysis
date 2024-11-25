@@ -12,8 +12,9 @@ import datetime
 #M.5 [10,35] (1274.5)
 #M [10,37]  (1274.5)
 
-#TODO: get rid of C constant and compare B coefficients
-#Graph fit with known constants A, B (A found exp const b) (B= avg wind speed)
+#TODO write error calc function 
+#TODO write error minimum function
+#TODO write function to take avg of pre-startup wind speed
 
 #ExpFitFunction = lambda a,b,x: a*np.exp(x*b)
 
@@ -68,7 +69,7 @@ def WindDataTimeStartupGraph(CalCoef, sampleRate, DP, numXPos, parsedWindData,Wi
         ax[i].plot(xCropped,yCropped,linewidth=1.5)
         ax[i].set_ylabel(f"x=({xCoords[i]})")
         ax[i].set_xlabel(r'${}*e^{{{}*x}}$'.format((float)(fitCoefs[0]),round(fitCoefs[1],4)))
-        ax[i].plot(xCropped,ExpFitFunction(*fitCoefs,xCropped),ls=":")
+        #ax[i].plot(xCropped,ExpFitFunction(*fitCoefs,xCropped),ls=":")
 
 
         
@@ -94,8 +95,8 @@ def CreateLogisticalFitGraph(sampleRate, expFitCoefs,DP, parsedWindData,WindSpee
     for i in range(8):
         x= np.arange(0,minDataLen/sampleRate,1/sampleRate)
 
-        xCropped = x[11*sampleRate:40*sampleRate]
-        yCropped = parsedWindData[i ][11*sampleRate:40*sampleRate]
+        xCropped = x[sampleRate:40*sampleRate]
+        yCropped = parsedWindData[i ][sampleRate:40*sampleRate]
 
         SteadyStateY = parsedWindData[i][30*sampleRate:40*sampleRate]
 
@@ -194,14 +195,22 @@ def main():
     print(len(ParsedWindData))
     WindvTime_ExpConstAx_Arr = [None]*4
 
+
     for i in range(4):
         
         
         windVTimeFig,windVTimeAx, expFitCoef = WindDataTimeStartupGraph(CalCoef,sampleRate,DP,numXPos,ParsedWindDataByWindSpeed[i],WindSpeeds[i])
-        expConstFig, expConstAx = CreateExpFitCoefGraph(expFitCoef,xCoords,WindSpeeds[i])
-        expConstFig.suptitle(f"Exp-fit-b-constant Vs. X Distance at Windspeed {WindSpeeds[i]}")
-        WindvTime_ExpConstAx_Arr[i] = [windVTimeAx,expConstAx]
+        #expConstFig, expConstAx = CreateExpFitCoefGraph(expFitCoef,xCoords,WindSpeeds[i])
+        #expConstFig.suptitle(f"Exp-fit-b-constant Vs. X Distance at Windspeed {WindSpeeds[i]}")
+        #WindvTime_ExpConstAx_Arr[i] = [windVTimeAx,expConstAx]
         logistFitFig, logistFitAx =  CreateLogisticalFitGraph(sampleRate,expFitCoef, DP,ParsedWindDataByWindSpeed[i],WindSpeeds[i])
+        for h in range(8):
+            errorVal, experFuncC, steadyStateMean, xRange ,experYdata= DP.CalcError(ParsedWindDataByWindSpeed[i][h],sampleRate)
+            experYdata = [steadyStateMean* x for x in experYdata]
+            print(f"Error at WS {WindSpeeds[i]} and x pos {xCoords[h]}= {errorVal}")
+
+            logistFitAx[h].plot(xRange,experYdata)
+        
 
 
 
