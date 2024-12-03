@@ -115,7 +115,7 @@ def CreateLogisticalFitGraph(sampleRate, expFitCoefs,DP, parsedWindData,WindSpee
         cValue = DP.FindLogistC(a,b,findCYValue,findCTValue)
 
         ax[i].plot(xCropped, yCropped, linewidth=1.5)
-        ax[i].plot(xCropped, LogistFitFunc(a,b,cValue,xCropped),ls=":",color="purple")
+        #ax[i].plot(xCropped, LogistFitFunc(a,b,cValue,xCropped),ls=":",color="purple")
         ax[i].set_ylabel(f"x=({xCoords[i]})")
         ax[i].set_ylabel(f"x=({xCoords[i]})")
 
@@ -178,6 +178,7 @@ def main():
     xCoords =[1274.5,1200.5,1127.3,1055.5,982.0,910.5,837.6,700]
     np.set_printoptions(suppress=True)
     plt.rcParams['text.usetex'] = True
+    dateString = str(datetime.datetime.now(tz=datetime.timezone.utc).date())
 
     ParsedWindDataByWindSpeed = [ [     [] for _ in range(numXPos)    ] for _ in range(numWindSpeeds) ] #3D Array
 
@@ -195,25 +196,29 @@ def main():
     print(len(ParsedWindData))
     WindvTime_ExpConstAx_Arr = [None]*4
 
+    
 
     for i in range(4):
         
-        
+        fileName = "WindDataResults/ExperFuncFit_WS"+WindSpeeds[i]+dateString+".png"
         windVTimeFig,windVTimeAx, expFitCoef = WindDataTimeStartupGraph(CalCoef,sampleRate,DP,numXPos,ParsedWindDataByWindSpeed[i],WindSpeeds[i])
         #expConstFig, expConstAx = CreateExpFitCoefGraph(expFitCoef,xCoords,WindSpeeds[i])
         #expConstFig.suptitle(f"Exp-fit-b-constant Vs. X Distance at Windspeed {WindSpeeds[i]}")
         #WindvTime_ExpConstAx_Arr[i] = [windVTimeAx,expConstAx]
         logistFitFig, logistFitAx =  CreateLogisticalFitGraph(sampleRate,expFitCoef, DP,ParsedWindDataByWindSpeed[i],WindSpeeds[i])
         for h in range(8):
-            errorVal, experFuncC, steadyStateMean, xRange ,experYdata= DP.CalcError(ParsedWindDataByWindSpeed[i][h],sampleRate)
+            errorVal, experFuncC, steadyStateMean, xRange ,experYdata= DP.CalcError(ParsedWindDataByWindSpeed[i][h],sampleRate,xCoords[h])
             experYdata = [steadyStateMean* x for x in experYdata]
             print(f"Error at WS {WindSpeeds[i]} and x pos {xCoords[h]}= {errorVal}")
 
             logistFitAx[h].plot(xRange,experYdata)
+        logistFitFig.set_size_inches(18.5,8.5,forward=True)
+
+        logistFitFig.savefig(fileName)
         
 
 
-
+    
     # BigWindVTimeFig, BigWindVTimeAx = plt.subplots(4,2)
     
     # AwsGraph, axAws = CreateAvgWindSpeedGraph(ParsedWindDataByWindSpeed,sampleRate,xCoords,WindSpeeds,DP)

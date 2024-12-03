@@ -51,14 +51,17 @@ class DataProcessing:
             i=i+1
         
         return parsedDataArr
-
+    
+    #Returns the max value in a list of data
     def FindMax(self, DataLists):
         maxLen=0
         for item in DataLists:
             if len(item) > maxLen:
                 maxLen = len(item)
         return maxLen
-
+    
+    
+    #returns the min value in a list of data
     def FindMin(self, DataLists):
         minLen=9999999999999
         for item in DataLists:
@@ -66,10 +69,12 @@ class DataProcessing:
                 minLen = len(item)
         return minLen
         
+    #returns coefficient array for an exponential fit
     def GetExpCurveFit(self, xVals,yVals):
         fitCoefs = curve_fit(lambda xVals,a,b: a*np.exp(b*xVals), xVals,yVals, maxfev=10000 )
         return fitCoefs
-
+    
+    #returns coefficient array for an exponential fit with C const
     def GetExpCurveFitWithC(self, xVals,yVals):
         fitCoefs = curve_fit(lambda xVals,a,b,c: a*np.exp(b*xVals)+c, xVals,yVals, maxfev=10000 )
         return fitCoefs
@@ -78,26 +83,34 @@ class DataProcessing:
     def ExpDataFitFunction(self, a,b,x):
         return a*np.e**(b*x) 
     
+    
     def FindLogistC(self,a,b,y,t):
         return (a)/((np.exp(a*t))*(y-(a/b)))+(b/np.exp(a*t))
     
+    #Experimental prediction of the function that represents 
+    #NOTES ON GAUGE DISTANCE ADJUSTMENT 
+    #Adjustments improced error for slower speeds, worsened for higher speeds, interesting behavior, could faster winds be giving turbulence which effects how fast the front moves downt the tank?  
+    def ExperFunc(self,t,c,vavg,delX):
+        return (-c*np.exp(t-(10+((delX)/(100*vavg))))/(1-(c*np.exp(t-(10+((delX)/(100*vavg)))))))
+        #return (-c*np.exp(t-(10)))/(1-(c*np.exp(t-(10))))
 
-    def ExperFunc(self,t,c,vavg):
-        return (-c*np.exp(t-10))/(1-(c*np.exp(t-10)))
     
+    #C constant calculation for experimental function fit
     def ExperFuncCalcC(self,y,vavg):
         return (-y)/(1-y)
 
-    def CalcError(self,yData,sampleRate):
+    #Calculates the error between actual data and experimental function fit
+    def CalcError(self,yData,sampleRate,xPos):
         steadyStateMean = np.mean(yData[30*sampleRate:40*sampleRate])
         experFuncC = self.ExperFuncCalcC(yData[10*sampleRate],steadyStateMean)
         xRange = np.linspace(0,40,sampleRate*40)
         experYData = []
         num = 0
         dem = 0
+        delX = 1361.5-xPos
         for i in range(len(xRange)):
-            experYData.append(self.ExperFunc(xRange[i],experFuncC,steadyStateMean))
-            num += ((self.ExperFunc(xRange[i],experFuncC,steadyStateMean)/steadyStateMean)-yData[i])**2
+            experYData.append(self.ExperFunc(xRange[i],experFuncC,steadyStateMean,delX))
+            num += ((self.ExperFunc(xRange[i],experFuncC,steadyStateMean,delX))-(yData[i]/steadyStateMean))**2
             
             dem += (yData[i]/steadyStateMean)**2
 
